@@ -1,17 +1,17 @@
 {
-    "name": ":vendor_slug/:package_slug",
-    "description": ":package_description",
+    "name": "nguemoue/laravel-dbobject",
+    "description": "Projet qui va permettre de faire la migration des procédure, fonctions, triggers stocke de manière simple ",
     "keywords": [
-        ":vendor_name",
+        "Nguemoue",
         "laravel",
-        ":package_slug"
+        "laravel-dbobject"
     ],
-    "homepage": "https://github.com/:vendor_slug/:package_slug",
+    "homepage": "https://github.com/nguemoue/laravel-dbobject",
     "license": "MIT",
     "authors": [
         {
-            "name": ":author_name",
-            "email": "author@domain.com",
+            "name": "Nguemoue",
+            "email": "lucchuala@gmail.com",
             "role": "Developer"
         }
     ],
@@ -21,6 +21,7 @@
         "illuminate/contracts": "^11.0||^12.0"
     },
     "require-dev": {
+        "roave/security-advisories": "dev-latest",
         "laravel/pint": "^1.14",
         "nunomaduro/collision": "^8.8",
         "larastan/larastan": "^3.0",
@@ -35,13 +36,13 @@
     },
     "autoload": {
         "psr-4": {
-            "VendorName\\Skeleton\\": "src/",
-            "VendorName\\Skeleton\\Database\\Factories\\": "database/factories/"
+            "Nguemoue\\LaravelDbObject\\": "src/",
+            "Nguemoue\\LaravelDbObject\\Database\\Factories\\": "database/factories/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "VendorName\\Skeleton\\Tests\\": "tests/",
+            "Nguemoue\\LaravelDbObject\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/"
         }
     },
@@ -63,10 +64,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "VendorName\\Skeleton\\SkeletonServiceProvider"
+                "Nguemoue\\LaravelDbObject\\LaravelDbObjectServiceProvider"
             ],
             "aliases": {
-                "Skeleton": "VendorName\\Skeleton\\Facades\\Skeleton"
+                "LaravelDbObject": "Nguemoue\\LaravelDbObject\\Facades\\LaravelDbObject"
             }
         }
     },

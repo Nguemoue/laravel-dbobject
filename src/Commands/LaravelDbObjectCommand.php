@@ -1,12 +1,12 @@
 <?php
 
-namespace VendorName\Skeleton\Commands;
+namespace Nguemoue\LaravelDbObject\Commands;
 
 use Illuminate\Console\Command;
 
-class SkeletonCommand extends Command
+class LaravelDbObjectCommand extends Command
 {
-    public $signature = 'skeleton';
+    public $signature = 'laravel-dbobject';
 
     public $description = 'My command';
 

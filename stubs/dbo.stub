@@ -1,0 +1,12 @@
+---
+object_type: __OBJECT_TYPE__
+group: __GROUP__
+depends_on: []
+tags: []
+description: "Description of the object"
+---
+-- up:
+-- Écrivez ici la définition SQL pour créer l'objet, par exemple:
+-- CREATE __TYPE__ {{ident "__NAME__"}} (...);
+-- down:
+DROP __TYPE__ IF EXISTS {{ident "__NAME__"}};
