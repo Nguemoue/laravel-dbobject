@@ -11,6 +11,16 @@
     "light": "#5EEAD4",
     "dark": "#0F766E"
   },
+  "topbarLinks": [
+    {
+      "name": "Support",
+      "url": "mailto:votre-email@exemple.com"
+    }
+  ],
+  "topbarCta": {
+    "type": "github",
+    "url": "https://github.com/Nguemoue/laravel-dbobject"
+  },
   "navigation": [
     {
       "group": "Introduction",
