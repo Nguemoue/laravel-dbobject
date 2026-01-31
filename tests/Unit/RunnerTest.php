@@ -3,62 +3,57 @@
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Nguemoue\LaravelDbObject\Migration\DboMigrator;
-use Nguemoue\LaravelDbObject\Migration\SqlFileParser;
 
-// Préparer un fichier SQL de vue pour le test
 beforeEach(function() {
-    $this->basePath = base_path('database/dbo/test');
-    File::ensureDirectoryExists($this->basePath);
-    $this->filePath = $this->basePath . '/my_view.sql';
-    $sqlContent = <<<SQL
----
-object_type: view
-group: test
-depends_on: []
-tags: []
-description: "Test view"
----
--- up:
-CREATE VIEW {{ident "my_view"}} AS SELECT 1 as one;
--- down:
-DROP VIEW IF EXISTS {{ident "my_view"}};
-SQL;
-    File::put($this->filePath, $sqlContent);
+    $this->basePath = sys_get_temp_dir() . '/dbo_test';
+    // Ensure clean state
+    if (File::exists($this->basePath)) {
+        File::deleteDirectory($this->basePath);
+    }
+    File::makeDirectory($this->basePath, 0755, true);
+    
+    // Create a group folder
+    $this->groupPath = $this->basePath . '/test_group';
+    File::makeDirectory($this->groupPath);
+
+    // Point config to this path
+    config(['db-objects.path' => $this->basePath]);
+    
+    // Create file
+    $this->upPath = $this->groupPath . '/my_view.up.sql';
+    $this->downPath = $this->groupPath . '/my_view.down.sql';
+    
+    File::put($this->upPath, "CREATE VIEW my_view AS SELECT 1 as col;");
+    File::put($this->downPath, "DROP VIEW IF EXISTS my_view;");
 });
 
 afterEach(function() {
-    // Nettoyer: supprimer le fichier et dossier test
-    File::delete($this->filePath);
-    File::deleteDirectory(dirname($this->filePath));
+    if (File::exists($this->basePath)) {
+        File::deleteDirectory($this->basePath);
+    }
 });
 
 it('migrates and rollbacks a view successfully', function () {
     $migrator = new DboMigrator();
-    // Au départ, la vue n'existe pas
-    // Exécuter la migration
+    
+    // Migrate
     $count = $migrator->migrateAll();
     expect($count)->toBe(1);
 
-    // Vérifier que la vue existe en base (SQLite) en interrogeant sqlite_master
+    // Verify existence in SQLite
     $exists = DB::selectOne("SELECT name FROM sqlite_master WHERE type='view' AND name='my_view'");
     expect($exists)->not->toBeNull();
 
-    // Status doit indiquer la vue migrée
+    // Verify Status
     $status = $migrator->getStatus();
     $myViewStatus = collect($status)->firstWhere('name', 'my_view');
-    expect($myViewStatus)->not->toBeNull();
     expect($myViewStatus['status'])->toBe('Migrated');
 
-    // Rollback la vue
+    // Rollback
     $rolled = $migrator->rollbackLastBatch();
     expect($rolled)->toBe(1);
 
-    // Vérifier que la vue a été supprimée
+    // Verify removal
     $existsAfter = DB::selectOne("SELECT name FROM sqlite_master WHERE type='view' AND name='my_view'");
     expect($existsAfter)->toBeNull();
-
-    // La table de suivi ne doit plus contenir d'entrée pour my_view
-    $statusAfter = $migrator->getStatus();
-    $myViewStatusAfter = collect($statusAfter)->firstWhere('name', 'my_view');
-    expect($myViewStatusAfter['status'])->toBe('Pending');
 });

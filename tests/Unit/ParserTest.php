@@ -3,35 +3,37 @@
 use Nguemoue\LaravelDbObject\Migration\SqlFileParser;
 use Illuminate\Support\Facades\File;
 
-it('can parse a SQL file with YAML front-matter and up/down sections', function () {
-    $sqlContent = <<<SQL
----
-object_type: view
-group: test
-depends_on: ["users_view"]
-tags: ["analytics"]
-description: "Test view description"
----
--- up:
-CREATE VIEW {{ident "active_users"}} AS SELECT * FROM users WHERE active = 1;
--- down:
-DROP VIEW IF EXISTS {{ident "active_users"}};
-SQL;
+it('can parse a SQL file with up/down structure and config', function () {
+    $tempDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'test_group';
+    if (!is_dir($tempDir)) {
+        mkdir($tempDir);
+    }
+    
+    $baseName = 'test_view';
+    $upPath = $tempDir . DIRECTORY_SEPARATOR . $baseName . '.up.sql';
+    $downPath = $tempDir . DIRECTORY_SEPARATOR . $baseName . '.down.sql';
+    $configPath = $tempDir . DIRECTORY_SEPARATOR . $baseName . '.sql.json';
+    
+    $upSql = "CREATE VIEW test_view AS SELECT 1;";
+    $downSql = "DROP VIEW IF EXISTS test_view;";
+    $config = json_encode(['enabled' => true, 'on_exists' => 'replace']);
+    
+    file_put_contents($upPath, $upSql);
+    file_put_contents($downPath, $downSql);
+    file_put_contents($configPath, $config);
 
-    // Ecrire le contenu dans un fichier temporaire
-    $tempPath = sys_get_temp_dir() . '/test_active_users.sql';
-    File::put($tempPath, $sqlContent);
+    $parsed = SqlFileParser::parse($upPath);
 
-    $parsed = SqlFileParser::parseFile($tempPath);
+    expect($parsed['name'])->toBe('test_view');
+    expect($parsed['group'])->toBe('test_group');
+    expect($parsed['type'])->toBe('VIEW');
+    expect($parsed['up_sql'])->toBe($upSql);
+    expect($parsed['down_sql'])->toBe($downSql);
+    expect($parsed['config_overrides'])->toHaveKey('on_exists', 'replace');
 
-    expect($parsed['type'])->toBe('view');
-    expect($parsed['group'])->toBe('test');
-    expect($parsed['depends'])->toBe(['users_view']);
-    expect($parsed['tags'])->toBe(['analytics']);
-    expect($parsed['description'])->toBe('Test view description');
-    expect(trim($parsed['up_sql']))->toStartWith('CREATE VIEW');
-    expect(trim($parsed['down_sql']))->toBe('DROP VIEW IF EXISTS {{ident "active_users"}};');
-
-    // Nettoyer le fichier temp
-    File::delete($tempPath);
+    // Clean up
+    @unlink($upPath);
+    @unlink($downPath);
+    @unlink($configPath);
+    @rmdir($tempDir);
 });

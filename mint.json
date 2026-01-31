@@ -1,0 +1,50 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "Laravel DbObject",
+  "logo": {
+    "light": "/public/logo.svg",
+    "dark": "/public/logo.svg"
+  },
+  "favicon": "/favicon.png",
+  "colors": {
+    "primary": "#0D9488",
+    "light": "#5EEAD4",
+    "dark": "#0F766E"
+  },
+  "navigation": [
+    {
+      "group": "Introduction",
+      "pages": [
+        "docs/introduction",
+        "docs/concepts",
+        "docs/getting-started",
+        "docs/deployment"
+      ]
+    },
+    {
+      "group": "Tutorials",
+      "pages": [
+        "docs/showcase/procedures",
+        "docs/showcase/functions",
+        "docs/showcase/views",
+        "docs/showcase/triggers"
+      ]
+    },
+    {
+      "group": "Reference",
+      "pages": [
+        "docs/manifests",
+        "docs/commands",
+        "docs/advanced/splitters",
+        "docs/advanced/transactions"
+      ]
+    },
+    {
+      "group": "Support",
+      "pages": [
+        "docs/faq",
+        "docs/troubleshooting"
+      ]
+    }
+  ]
+}

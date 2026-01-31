@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 class DboMakeCommand extends Command
 {
     protected $signature = 'dbo:make {name : Nom de l\'objet (fichier)} {--type= : Type de l\'objet (function, procedure, trigger, view)} {--group= : Group/dossier de classement (optionnel)}';
-    protected $description = 'Crée un fichier de migration pour un objet de base de données (fonction, procédure, vue, trigger).';
+    protected $description = 'Crée les fichiers de migration (.up.sql, .down.sql) pour un objet de base de données.';
 
     public function handle()
     {
@@ -24,17 +24,20 @@ class DboMakeCommand extends Command
             return 1;
         }
 
-        // S'assurer que le nom n'a pas d'extension .sql (on l'ajoutera)
-        $fileName = Str::endsWith($name, '.sql') ? $name : $name . '.sql';
+        // Clean name
+        $name = preg_replace('/\.up\.sql$/', '', $name);
+        $name = preg_replace('/\.sql$/', '', $name);
 
         // Construire le chemin du fichier à créer
         $basePath = config('dbobjects.path', base_path('database/dbo'));
         $groupPath = $basePath . DIRECTORY_SEPARATOR . $group;
-        $fullPath = $groupPath . DIRECTORY_SEPARATOR . $fileName;
+        
+        $upPath = $groupPath . DIRECTORY_SEPARATOR . $name . '.up.sql';
+        $downPath = $groupPath . DIRECTORY_SEPARATOR . $name . '.down.sql';
 
         // Vérifier l'existence
-        if (File::exists($fullPath)) {
-            $this->error("Le fichier $fullPath existe déjà.");
+        if (File::exists($upPath)) {
+            $this->error("Le fichier $upPath existe déjà.");
             return 1;
         }
 
@@ -43,27 +46,30 @@ class DboMakeCommand extends Command
             File::makeDirectory($groupPath, 0755, true);
         }
 
-        // Charger le stub depuis la config (sinon stub interne)
-        $stubPath = config('dbobjects.stub');
-        if (!File::exists($stubPath)) {
-            $stubPath = __DIR__ . '/../../stubs/dbo.stub';
-        }
+        // Load stubs
+        $stubUpPath = __DIR__ . '/../../stubs/dbo.up.stub';
+        $stubDownPath = __DIR__ . '/../../stubs/dbo.down.stub';
 
-        $stubContent = File::get($stubPath);
+        $upContent = File::exists($stubUpPath) ? File::get($stubUpPath) : "CREATE __TYPE__ __NAME__\n";
+        $downContent = File::exists($stubDownPath) ? File::get($stubDownPath) : "DROP __TYPE__ IF EXISTS __NAME__;\n";
 
-        // Remplacer les placeholders dans le stub
+        // Replacements
         $replacements = [
-            '__OBJECT_TYPE__' => $type,
-            '__GROUP__'       => $group,
             '__NAME__'        => $name,
             '__TYPE__'        => strtoupper($type),
         ];
-        $content = str_replace(array_keys($replacements), array_values($replacements), $stubContent);
+        
+        $upContent = str_replace(array_keys($replacements), array_values($replacements), $upContent);
+        $downContent = str_replace(array_keys($replacements), array_values($replacements), $downContent);
 
-        // Écrire le nouveau fichier
-        File::put($fullPath, $content);
+        // Write files
+        File::put($upPath, $upContent);
+        File::put($downPath, $downContent);
 
-        $this->info("Fichier de migration créé: $fullPath");
+        $this->info("Fichiers de migration créés:");
+        $this->info("- $upPath");
+        $this->info("- $downPath");
+        
         return 0;
     }
 }

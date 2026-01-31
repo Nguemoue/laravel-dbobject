@@ -1,0 +1,1 @@
+DROP __TYPE__ IF EXISTS __NAME__;

@@ -2,104 +2,88 @@
 
 namespace Nguemoue\LaravelDbObject\Migration;
 
-use Symfony\Component\Yaml\Yaml;
-
 class SqlFileParser
 {
     /**
-     * Parse un fichier SQL d'objet et renvoie un tableau contenant:
-     * - 'type': object_type (string)
-     * - 'group': group (string)
-     * - 'depends': depends_on (array de noms)
-     * - 'tags': tags (array)
-     * - 'description': description (string)
-     * - 'name': nom de l'objet (d'après le nom de fichier, ou meta)
-     * - 'up_sql': SQL de création (string)
-     * - 'down_sql': SQL de suppression (string)
+     * Parse an object definition starting from its UP SQL file.
+     *
+     * @param string $upFilePath Path to the .up.sql file
+     * @return array
      */
-    public static function parseFile(string $filePath): array
+    public static function parse(string $upFilePath): array
     {
-        $content = file_get_contents($filePath);
-        if ($content === false) {
-            throw new \RuntimeException("Impossible de lire le fichier: $filePath");
+        $directory = dirname($upFilePath);
+        $filename = basename($upFilePath);
+        
+        // Expected format: name.up.sql
+        // If the file does not end in .up.sql, we might skip it or handle it legacy?
+        // The user says "Drop a .up.sql file".
+        
+        // Let's support legacy .sql too?
+        // The prompt implies a new system. Let's strictly look for .up.sql or handle .sql as legacy if needed.
+        // But for "UPDATE the project", let's assume we look for .up.sql primarily.
+        // However, DboMigrator currently globs `*.sql`. I will change that later.
+        
+        $baseName = preg_replace('/\.up\.sql$/', '', $filename);
+        if ($baseName === $filename) {
+             // Fallback for simple .sql files if we decide to support them as "up only"
+             $baseName = preg_replace('/\.sql$/', '', $filename);
         }
-
-        // Extraire front-matter YAML (entre les premiers ---)
-        $yamlPart = '';
-        $upSql = '';
+        
+        $group = basename($directory);
+        
+        $upSql = file_get_contents($upFilePath);
+        if ($upSql === false) {
+             throw new \RuntimeException("Cannot read file: $upFilePath");
+        }
+        
+        // Look for down file
+        $downFilePath = $directory . DIRECTORY_SEPARATOR . $baseName . '.down.sql';
         $downSql = '';
-        $lines = preg_split("/(\r?\n)/", $content);
-        $i = 0;
-        if (isset($lines[$i]) && trim($lines[$i]) === '---') {
-            // Parcourir jusqu'à la fermeture '---'
-            $i++;
-            while ($i < count($lines) && trim($lines[$i]) !== '---') {
-                $yamlPart .= $lines[$i] . "\n";
-                $i++;
-            }
-            // Passer la ligne de fermeture '---'
-            if ($i < count($lines) && trim($lines[$i]) === '---') {
-                $i++;
+        if (file_exists($downFilePath)) {
+            $downSql = file_get_contents($downFilePath) ?: '';
+        }
+        
+        // Look for config file
+        $configFilePath = $directory . DIRECTORY_SEPARATOR . $baseName . '.sql.json';
+        $configOverrides = [];
+        if (file_exists($configFilePath)) {
+            $json = file_get_contents($configFilePath);
+            if ($json) {
+                $decoded = json_decode($json, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $configOverrides = $decoded;
+                }
             }
         }
-
-        // Chercher la section -- up:
-        $mode = null;
-        for ($iMax = count($lines); $i < $iMax; $i++) {
-            $line = $lines[$i];
-            if (preg_match('/^--\s*up:/i', $line)) {
-                $mode = 'up';
-                continue;
-            }
-            if (preg_match('/^--\s*down:/i', $line)) {
-                $mode = 'down';
-                continue;
-            }
-            if ($mode === 'up') {
-                $upSql .= $line . "\n";
-            } elseif ($mode === 'down') {
-                $downSql .= $line . "\n";
-            }
-        }
-
-        // Enlever d'éventuels commentaires ou espaces en trop en fin de requêtes
-        $upSql = trim($upSql);
-        $downSql = trim($downSql);
-
-        // Parser le YAML
-        $meta = [];
-        if (!empty(trim($yamlPart))) {
-            $meta = Yaml::parse($yamlPart);
-            if (!is_array($meta)) {
-                $meta = [];
-            }
-        }
-
-        // Déterminer le nom de l'objet:
-        // Par convention le nom du fichier (sans extension) est le nom de l'objet
-        $filename = pathinfo($filePath, PATHINFO_FILENAME);
-        $name = $filename;
-        // (optionnel) si le YAML contient un champ "name", on pourrait l'utiliser à la place
-        if (!empty($meta['name'])) {
-            $name = $meta['name'];
-        }
-
-        // Object_type, group, etc depuis meta
-        $type = $meta['object_type'] ?? '';
-        $group = $meta['group'] ?? '';
-        $depends = $meta['depends_on'] ?? [];
-        $tags = $meta['tags'] ?? [];
-        $description = $meta['description'] ?? '';
-
+        
+        // Infer type from SQL
+        $type = self::inferType($upSql);
+        
         return [
-            'name' => $name,
-            'type' => $type,
+            'name' => $baseName,
             'group' => $group,
-            'depends' => $depends,
-            'tags' => $tags,
-            'description' => $description,
+            'type' => $type, // might be 'unknown' or null
             'up_sql' => $upSql,
             'down_sql' => $downSql,
+            'config_overrides' => $configOverrides,
+            'depends' => [], // Dependencies are not easily defined in pure SQL without parsing. 
+                             // The user didn't mention dependencies in the new spec. 
+                             // We will leave it empty for now.
         ];
+    }
+    
+    protected static function inferType(string $sql): string
+    {
+        // Simple regex to find CREATE ...
+        // Remove comments for better matching?
+        $sql = preg_replace('!/\*.*?\*/!s', '', $sql); // block comments
+        $sql = preg_replace('/^--.*$/m', '', $sql); // line comments
+        
+        if (preg_match('/CREATE\s+(?:OR\s+REPLACE\s+)?(PROCEDURE|FUNCTION|VIEW|TRIGGER)\s+/i', $sql, $matches)) {
+            return strtoupper($matches[1]);
+        }
+        
+        return 'OBJECT';
     }
 }

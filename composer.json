@@ -2,8 +2,12 @@
     "name": "nguemoue/laravel-dbobject",
     "description": "Projet qui va permettre de faire la migration des procédure, fonctions, triggers stocke de manière simple ",
     "keywords": [
-        "nguemoue",
+        "Nguemoue",
         "laravel",
+        "Mysql",
+        "Database",
+        "Sql",
+        "Mysql migration",
         "laravel-dbobject"
     ],
     "homepage": "https://github.com/nguemoue/laravel-dbobject",
