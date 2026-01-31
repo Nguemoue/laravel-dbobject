@@ -1,45 +1,58 @@
 ---
-title: Manifests & Config
-description: Configure object-specific behavior using JSON manifests.
+title: Manifests (.sql.json)
+description: Fine-tune how individual objects are migrated and managed.
 ---
 
-## Overview
+While the package provides smart defaults, you sometimes need specific behavior for a single object. This is where the `.sql.json` file comes in.
 
-Each stored object is defined by a set of files. While the `.up.sql` file is mandatory, you can also provide a `.sql.json` file to override default driver behaviors for that specific object.
+## How it works
 
-## File Naming
+The manifest must share the same base name as your SQL files and be located in the same directory.
 
-For an object named `calculate_tax` in the `finance` group:
+```text
+database/dbo/
+└── general/
+    ├── my_proc.up.sql
+    ├── my_proc.down.sql
+    └── my_proc.sql.json   <-- This manifest controls 'my_proc'
+```
 
-| File | Description |
-| :--- | :--- |
-| `calculate_tax.up.sql` | **Required**. Contains the `CREATE` statement(s). |
-| `calculate_tax.down.sql` | **Optional**. Contains the `DROP` statement(s). |
-| `calculate_tax.sql.json` | **Optional**. Configuration overrides. |
+## Available Keys
 
-## Configuration Options
+| Key | Value | Description |
+| :--- | :--- | :--- |
+| **enabled** | `true` or `false` | If `false`, the object is completely ignored during migrations. Useful for WIP objects. |
+| **transactional** | `true` or `false` | Wraps the execution in a transaction. Note: MySQL implicitly commits DDL, so this is `false` by default there. |
+| **splitter** | `"none"`, `"mysql_delimiter"`, `"go_batch"` | Defines how to split multiple statements. Use `none` if your script is a single block. |
+| **on_exists** | `"recreate"`, `"replace"`, `"skip"` | `recreate` runs a DROP before CREATE. `replace` assumes your SQL uses `CREATE OR REPLACE`. |
+| **on_missing_drop**| `"auto"`, `"skip"`, `"fail"` | Behavior when rolling back if `.down.sql` is missing. |
+| **delimiter** | `string` | The marker for statement ends when using `mysql_delimiter` (default `$$`). |
+| **batch_separator**| `string` | The marker for `go_batch` (default `GO`). |
 
-You can override driver defaults using the `.sql.json` file.
+## Common Examples
+
+### Forcing a Recreate for a View
+If you are changing the columns of a view, simple "Replace" might fail. Use "Recreate" to ensure a clean state.
 
 ```json
 {
-  "enabled": true,
-  "transactional": false,
-  "splitter": "mysql_delimiter",
-  "on_exists": "recreate",
-  "on_missing_drop": "auto"
+  "on_exists": "recreate"
 }
 ```
 
-### Reference
+### Disabling an object
+```json
+{
+  "enabled": false
+}
+```
 
-| Key | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| **enabled** | `bool` | `true` | Set to `false` to skip migration of this object. |
-| **transactional** | `bool` | *Driver Default* | Whether to wrap the execution in a database transaction. |
-| **splitter** | `string` | *Driver Default* | Strategy to split SQL statements (`none`, `mysql_delimiter`, `go_batch`). |
-| **delimiter** | `string` | `$$` | Custom delimiter used when splitter is `mysql_delimiter`. |
-| **batch_separator**| `string` | `GO` | Separator used when splitter is `go_batch`. |
-| **on_exists** | `string` | *Driver Default* | Behavior if object exists: `recreate` (Drop/Create) or `replace` (Create Or Replace). |
-| **on_missing_drop**| `string` | `auto` | Behavior during rollback if `.down.sql` is missing. <br>• `auto`: Generate a default DROP statement.<br>• `skip`: Do nothing (remove from log only).<br>• `fail`: Throw an exception. |
-| **schema** | `string` | *Driver Default* | Target schema name (informational for some drivers). |
+### Custom MySQL Delimiter
+If your procedure uses `$$` inside the logic (e.g. for strings), change the delimiter to something else like `//`.
+
+```json
+{
+  "splitter": "mysql_delimiter",
+  "delimiter": "//"
+}
+```
