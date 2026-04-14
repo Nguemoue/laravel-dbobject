@@ -16,7 +16,7 @@ class DboStatusCommand extends Command
         $statusList = $migrator->getStatus();
 
         if (empty($statusList)) {
-            $this->info("Aucun fichier d'objet trouvé dans " . config('dbobjects.path'));
+            $this->info("Aucun fichier d'objet trouvé dans " . config('db-objects.path'));
             return 0;
         }
 

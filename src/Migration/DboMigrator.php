@@ -94,18 +94,22 @@ class DboMigrator
 
                 // Split and Execute
                 $stmts = SqlSplitter::split($object['up_sql'], $config->splitter, $config->delimiter, $config->batchSeparator);
-                
+
                 foreach ($stmts as $stmt) {
                     if (trim($stmt) === '') continue;
                     DB::statement($stmt);
                 }
             };
 
-            // Transactional wrapper
-            if ($config->transactional) {
-                DB::transaction($run);
-            } else {
-                $run();
+            try {
+                // Transactional wrapper
+                if ($config->transactional) {
+                    DB::transaction($run);
+                } else {
+                    $run();
+                }
+            } catch (\Exception $e) {
+                throw new \RuntimeException("Migration failed for {$type} [{$name}]: " . $e->getMessage(), 0, $e);
             }
 
             // Log migration
@@ -120,7 +124,7 @@ class DboMigrator
         return $migratedCount;
     }
 
-    public function rollbackLastBatch(): int
+    public function rollbackLastBatch(?callable $onRolledBack = null): int
     {
         $lastBatch = $this->repository->getLastBatchNumber();
         if ($lastBatch === null) {
@@ -170,6 +174,9 @@ class DboMigrator
                     // Do not execute any drop SQL, just remove from logs
                     $this->repository->remove($name, $type);
                     $count++;
+                    if ($onRolledBack) {
+                        $onRolledBack($name, $type);
+                    }
                     continue;
                 } else {
                     // Default / Auto -> Generate Drop
@@ -186,20 +193,28 @@ class DboMigrator
                 }
             };
             
-            if ($config->transactional) {
-                DB::transaction($run);
-            } else {
-                $run();
+            try {
+                if ($config->transactional) {
+                    DB::transaction($run);
+                } else {
+                    $run();
+                }
+            } catch (\Exception $e) {
+                throw new \RuntimeException("Rollback failed for {$type} [{$name}]: " . $e->getMessage(), 0, $e);
             }
 
             $this->repository->remove($name, $type);
             $count++;
+            
+            if ($onRolledBack) {
+                $onRolledBack($name, $type);
+            }
         }
 
         return $count;
     }
 
-    public function rollbackObject(string $name): bool
+    public function rollbackObject(string $name, ?callable $onRolledBack = null): bool
     {
         $record = $this->repository->findByName($name);
         if (!$record) {
@@ -231,6 +246,9 @@ class DboMigrator
                 throw new \RuntimeException("Missing down SQL for object: {$type} {$name}");
             } elseif ($config->onMissingDrop === 'skip') {
                 $this->repository->remove($name, $type);
+                if ($onRolledBack) {
+                    $onRolledBack($name, $type);
+                }
                 return true;
             } else {
                 $downSql = $this->defaultDropStatement($type, $name, $adapter);
@@ -245,13 +263,22 @@ class DboMigrator
             }
         };
 
-        if ($config->transactional) {
-            DB::transaction($run);
-        } else {
-            $run();
+        try {
+            if ($config->transactional) {
+                DB::transaction($run);
+            } else {
+                $run();
+            }
+        } catch (\Exception $e) {
+            throw new \RuntimeException("Rollback failed for {$type} [{$name}]: " . $e->getMessage(), 0, $e);
         }
 
         $this->repository->remove($name, $type);
+        
+        if ($onRolledBack) {
+            $onRolledBack($name, $type);
+        }
+
         return true;
     }
 

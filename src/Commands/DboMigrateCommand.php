@@ -17,7 +17,7 @@ class DboMigrateCommand extends Command
 
         try {
             $count = $migrator->migrateAll(function($objectName, $objectType) {
-                $this->line("Migrated: <info>{$objectType} {$objectName}</info>");
+                $this->line("Migrating: <info>{$objectType} {$objectName}</info>");
             });
         } catch (\Exception $e) {
             $this->error("Erreur lors de la migration: " . $e->getMessage());

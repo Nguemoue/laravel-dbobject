@@ -17,7 +17,11 @@ class DboRollbackCommand extends Command
 
         if ($objectName) {
             // Rollback d'un objet particulier
-            if ($migrator->rollbackObject($objectName)) {
+            $success = $migrator->rollbackObject($objectName, function($name, $type) {
+                $this->line("Rolling back: <info>{$type} {$name}</info>");
+            });
+            
+            if ($success) {
                 $this->info("Objet '{$objectName}' rollbacké avec succès.");
                 return 0;
             }
@@ -33,7 +37,9 @@ class DboRollbackCommand extends Command
             return 0;
         }
         $this->info("Rollback du batch #{$batch}...");
-        $rolledBack = $migrator->rollbackLastBatch();
+        $rolledBack = $migrator->rollbackLastBatch(function($name, $type) {
+            $this->line("Rolling back: <info>{$type} {$name}</info>");
+        });
         if ($rolledBack > 0) {
             $this->info("Batch #{$batch} annulé ({$rolledBack} objet(s) rollbacké(s)).");
         } else {
