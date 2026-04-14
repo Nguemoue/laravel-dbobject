@@ -2,6 +2,7 @@
 
 namespace Nguemoue\LaravelDbObject\Migration;
 
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -20,7 +21,7 @@ class DboMigrationRepository
     public function ensureTableExists(): void
     {
         if (! Schema::hasTable($this->table)) {
-            Schema::create($this->table, static function($table) {
+            Schema::create($this->table, static function ($table) {
                 $table->id();
                 $table->string('object_name');
                 $table->string('object_type');
@@ -34,6 +35,7 @@ class DboMigrationRepository
 
     /**
      * Renvoie toutes les migrations appliquées (toutes entrées de la table).
+     *
      * @return array Tableau associatif des enregistrements (colonnes -> valeurs).
      */
     public function getAllApplied(): array
@@ -51,6 +53,7 @@ class DboMigrationRepository
                 'migrated_at' => $rec->migrated_at,
             ];
         }
+
         return $result;
     }
 
@@ -60,13 +63,14 @@ class DboMigrationRepository
     public function getLastBatchNumber(): ?int
     {
         $batch = DB::table($this->table)->max('batch');
+
         return $batch ?: null;
     }
 
     /**
      * Renvoie les enregistrements du batch spécifié (sous forme de collection d'objets).
      */
-    public function getBatch(int $batch): \Illuminate\Support\Collection
+    public function getBatch(int $batch): Collection
     {
         return DB::table($this->table)->where('batch', $batch)->orderBy('id')->get();
     }
@@ -79,8 +83,8 @@ class DboMigrationRepository
         DB::table($this->table)->insert([
             'object_name' => $objectName,
             'object_type' => $objectType,
-            'group'       => $group,
-            'batch'       => $batch,
+            'group' => $group,
+            'batch' => $batch,
             'migrated_at' => now(),
         ]);
     }

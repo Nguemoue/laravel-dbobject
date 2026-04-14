@@ -6,17 +6,17 @@ use Illuminate\Support\Facades\DB;
 use Nguemoue\LaravelDbObject\Adapters\AdapterInterface;
 use Nguemoue\LaravelDbObject\Adapters\MySqlAdapter;
 use Nguemoue\LaravelDbObject\Adapters\PgSqlAdapter;
-use Nguemoue\LaravelDbObject\Adapters\SqlSrvAdapter;
 use Nguemoue\LaravelDbObject\Adapters\SqliteAdapter;
+use Nguemoue\LaravelDbObject\Adapters\SqlSrvAdapter;
 use Nguemoue\LaravelDbObject\Configuration\ObjectConfiguration;
 
 class DboMigrator
 {
     protected DboMigrationRepository $repository;
-    
+
     public function __construct(?DboMigrationRepository $repository = null)
     {
-        $this->repository = $repository ?: new DboMigrationRepository();
+        $this->repository = $repository ?: new DboMigrationRepository;
     }
 
     public function getRepository(): DboMigrationRepository
@@ -27,10 +27,10 @@ class DboMigrator
     protected function getAdapter(string $driver): AdapterInterface
     {
         return match ($driver) {
-            'pgsql' => new PgSqlAdapter(),
-            'sqlsrv' => new SqlSrvAdapter(),
-            'sqlite' => new SqliteAdapter(),
-            default => new MySqlAdapter(), // mysql, mariadb
+            'pgsql' => new PgSqlAdapter,
+            'sqlsrv' => new SqlSrvAdapter,
+            'sqlite' => new SqliteAdapter,
+            default => new MySqlAdapter, // mysql, mariadb
         };
     }
 
@@ -48,12 +48,12 @@ class DboMigrator
         $connectionName = DB::getDefaultConnection();
         $driver = DB::connection($connectionName)->getDriverName();
         $adapter = $this->getAdapter($driver);
-        
+
         // Get applied migrations
         $appliedRecords = $this->repository->getAllApplied();
         $appliedSet = [];
         foreach ($appliedRecords as $rec) {
-            $appliedSet[strtolower($rec['object_type'] . ':' . $rec['object_name'])] = true;
+            $appliedSet[strtolower($rec['object_type'].':'.$rec['object_name'])] = true;
         }
 
         $migratedCount = 0;
@@ -67,7 +67,7 @@ class DboMigrator
             $config = new ObjectConfiguration($driver, $object['config_overrides']);
 
             // 1. Check enabled
-            if (!$config->enabled) {
+            if (! $config->enabled) {
                 continue;
             }
 
@@ -79,7 +79,7 @@ class DboMigrator
             }
 
             // 3. Check if already migrated
-            $key = strtolower($type . ':' . $name);
+            $key = strtolower($type.':'.$name);
             if (isset($appliedSet[$key])) {
                 continue;
             }
@@ -96,7 +96,9 @@ class DboMigrator
                 $stmts = SqlSplitter::split($object['up_sql'], $config->splitter, $config->delimiter, $config->batchSeparator);
 
                 foreach ($stmts as $stmt) {
-                    if (trim($stmt) === '') continue;
+                    if (trim($stmt) === '') {
+                        continue;
+                    }
                     DB::statement($stmt);
                 }
             };
@@ -109,7 +111,7 @@ class DboMigrator
                     $run();
                 }
             } catch (\Exception $e) {
-                throw new \RuntimeException("Migration failed for {$type} [{$name}]: " . $e->getMessage(), 0, $e);
+                throw new \RuntimeException("Migration failed for {$type} [{$name}]: ".$e->getMessage(), 0, $e);
             }
 
             // Log migration
@@ -141,7 +143,7 @@ class DboMigrator
         $basePath = config('db-objects.path', base_path('database/dbo'));
 
         // Sort by ID descending (reverse order of creation)
-        usort($batchRecords, function($a, $b) {
+        usort($batchRecords, function ($a, $b) {
             return $b->id - $a->id;
         });
 
@@ -150,13 +152,13 @@ class DboMigrator
             $name = $rec->object_name;
             $type = $rec->object_type;
             $group = $rec->group;
-            
+
             // Find file
-            $upPath = $basePath . DIRECTORY_SEPARATOR . $group . DIRECTORY_SEPARATOR . $name . '.sql';
-            
+            $upPath = $basePath.DIRECTORY_SEPARATOR.$group.DIRECTORY_SEPARATOR.$name.'.sql';
+
             $downSql = null;
             $config = null;
-            
+
             if (file_exists($upPath)) {
                 $object = SqlFileParser::parse($upPath);
                 $downSql = $object['down_sql'];
@@ -177,6 +179,7 @@ class DboMigrator
                     if ($onRolledBack) {
                         $onRolledBack($name, $type);
                     }
+
                     continue;
                 } else {
                     // Default / Auto -> Generate Drop
@@ -188,11 +191,13 @@ class DboMigrator
             $run = function () use ($downSql, $config) {
                 $stmts = SqlSplitter::split($downSql, $config->splitter, $config->delimiter, $config->batchSeparator);
                 foreach ($stmts as $stmt) {
-                    if (trim($stmt) === '') continue;
+                    if (trim($stmt) === '') {
+                        continue;
+                    }
                     DB::statement($stmt);
                 }
             };
-            
+
             try {
                 if ($config->transactional) {
                     DB::transaction($run);
@@ -200,12 +205,12 @@ class DboMigrator
                     $run();
                 }
             } catch (\Exception $e) {
-                throw new \RuntimeException("Rollback failed for {$type} [{$name}]: " . $e->getMessage(), 0, $e);
+                throw new \RuntimeException("Rollback failed for {$type} [{$name}]: ".$e->getMessage(), 0, $e);
             }
 
             $this->repository->remove($name, $type);
             $count++;
-            
+
             if ($onRolledBack) {
                 $onRolledBack($name, $type);
             }
@@ -217,10 +222,10 @@ class DboMigrator
     public function rollbackObject(string $name, ?callable $onRolledBack = null): bool
     {
         $record = $this->repository->findByName($name);
-        if (!$record) {
+        if (! $record) {
             return false;
         }
-        
+
         $connectionName = DB::getDefaultConnection();
         $driver = DB::connection($connectionName)->getDriverName();
         $adapter = $this->getAdapter($driver);
@@ -228,7 +233,7 @@ class DboMigrator
 
         $type = $record->object_type;
         $group = $record->group;
-        $upPath = $basePath . DIRECTORY_SEPARATOR . $group . DIRECTORY_SEPARATOR . $name . '.sql';
+        $upPath = $basePath.DIRECTORY_SEPARATOR.$group.DIRECTORY_SEPARATOR.$name.'.sql';
 
         $downSql = null;
         $config = null;
@@ -249,6 +254,7 @@ class DboMigrator
                 if ($onRolledBack) {
                     $onRolledBack($name, $type);
                 }
+
                 return true;
             } else {
                 $downSql = $this->defaultDropStatement($type, $name, $adapter);
@@ -258,7 +264,9 @@ class DboMigrator
         $run = function () use ($downSql, $config) {
             $stmts = SqlSplitter::split($downSql, $config->splitter, $config->delimiter, $config->batchSeparator);
             foreach ($stmts as $stmt) {
-                if (trim($stmt) === '') continue;
+                if (trim($stmt) === '') {
+                    continue;
+                }
                 DB::statement($stmt);
             }
         };
@@ -270,11 +278,11 @@ class DboMigrator
                 $run();
             }
         } catch (\Exception $e) {
-            throw new \RuntimeException("Rollback failed for {$type} [{$name}]: " . $e->getMessage(), 0, $e);
+            throw new \RuntimeException("Rollback failed for {$type} [{$name}]: ".$e->getMessage(), 0, $e);
         }
 
         $this->repository->remove($name, $type);
-        
+
         if ($onRolledBack) {
             $onRolledBack($name, $type);
         }
@@ -291,7 +299,7 @@ class DboMigrator
         $applied = $this->repository->getAllApplied();
         $appliedIndex = [];
         foreach ($applied as $rec) {
-            $key = strtolower($rec['object_type'] . ':' . $rec['object_name']);
+            $key = strtolower($rec['object_type'].':'.$rec['object_name']);
             $appliedIndex[$key] = $rec;
         }
 
@@ -300,7 +308,7 @@ class DboMigrator
             $name = $obj['name'];
             $type = $obj['type'];
             $group = $obj['group'];
-            $key = strtolower($type . ':' . $name);
+            $key = strtolower($type.':'.$name);
 
             if (isset($appliedIndex[$key])) {
                 $batch = $appliedIndex[$key]['batch'];
@@ -309,7 +317,7 @@ class DboMigrator
                     'type' => $type,
                     'group' => $group,
                     'status' => 'Migrated',
-                    'batch' => $batch
+                    'batch' => $batch,
                 ];
                 unset($appliedIndex[$key]);
             } else {
@@ -317,7 +325,7 @@ class DboMigrator
                     'name' => $name,
                     'type' => $type,
                     'group' => $group,
-                    'status' => 'Pending'
+                    'status' => 'Pending',
                 ];
             }
         }
@@ -328,14 +336,15 @@ class DboMigrator
                 'type' => $rec['object_type'],
                 'group' => $rec['group'],
                 'status' => 'Orphaned',
-                'batch' => $rec['batch']
+                'batch' => $rec['batch'],
             ];
         }
 
-        usort($statusList, static function($a, $b) {
+        usort($statusList, static function ($a, $b) {
             if ($a['group'] === $b['group']) {
                 return strcmp($a['name'], $b['name']);
             }
+
             return strcmp($a['group'], $b['group']);
         });
 
@@ -345,18 +354,19 @@ class DboMigrator
     protected function getAllUpFiles(string $basePath): array
     {
         $files = [];
-        if (!is_dir($basePath)) {
+        if (! is_dir($basePath)) {
             return $files;
         }
         $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($basePath));
         foreach ($iterator as $file) {
             // Now we look for any .sql file, but we exclude .up.sql and .down.sql if they exist from legacy
             if ($file->isFile() && str_ends_with($file->getFilename(), '.sql')) {
-                if (!str_ends_with($file->getFilename(), '.up.sql') && !str_ends_with($file->getFilename(), '.down.sql')) {
+                if (! str_ends_with($file->getFilename(), '.up.sql') && ! str_ends_with($file->getFilename(), '.down.sql')) {
                     $files[] = $file->getPathname();
                 }
             }
         }
+
         return $files;
     }
 
@@ -364,6 +374,7 @@ class DboMigrator
     {
         $type = strtoupper($type);
         $quotedName = $adapter->quoteIdentifier($name);
+
         return match ($type) {
             'FUNCTION' => "DROP FUNCTION IF EXISTS {$quotedName}",
             'PROCEDURE' => "DROP PROCEDURE IF EXISTS {$quotedName}",

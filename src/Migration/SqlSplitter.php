@@ -7,10 +7,10 @@ class SqlSplitter
     /**
      * Splits SQL content based on the configured strategy.
      *
-     * @param string $sql The SQL content.
-     * @param string $splitter The splitter strategy ("none", "mysql_delimiter", "go_batch").
-     * @param string $delimiter The custom delimiter (used for mysql_delimiter).
-     * @param string $batchSeparator The batch separator (used for go_batch, default "GO").
+     * @param  string  $sql  The SQL content.
+     * @param  string  $splitter  The splitter strategy ("none", "mysql_delimiter", "go_batch").
+     * @param  string  $delimiter  The custom delimiter (used for mysql_delimiter).
+     * @param  string  $batchSeparator  The batch separator (used for go_batch, default "GO").
      * @return array The list of SQL statements.
      */
     public static function split(string $sql, string $splitter, string $delimiter = '$$', string $batchSeparator = 'GO'): array
@@ -31,14 +31,14 @@ class SqlSplitter
         // Split by the delimiter
         $parts = explode($delimiter, $sql);
         $stmts = [];
-        
+
         foreach ($parts as $part) {
             $trimmed = trim($part);
             if ($trimmed !== '') {
                 $stmts[] = $trimmed;
             }
         }
-        
+
         return $stmts;
     }
 
@@ -48,7 +48,7 @@ class SqlSplitter
         $lines = explode("\n", $sql);
         $stmts = [];
         $buffer = '';
-        
+
         foreach ($lines as $line) {
             if (trim(strtoupper($line)) === strtoupper($separator)) {
                 if (trim($buffer) !== '') {
@@ -56,14 +56,14 @@ class SqlSplitter
                 }
                 $buffer = '';
             } else {
-                $buffer .= $line . "\n";
+                $buffer .= $line."\n";
             }
         }
-        
+
         if (trim($buffer) !== '') {
             $stmts[] = trim($buffer);
         }
-        
+
         return $stmts;
     }
 }

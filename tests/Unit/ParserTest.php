@@ -1,18 +1,17 @@
 <?php
 
 use Nguemoue\LaravelDbObject\Migration\SqlFileParser;
-use Illuminate\Support\Facades\File;
 
 it('can parse a single SQL file with front-matter and up/down markers', function () {
-    $tempDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'test_group';
-    if (!is_dir($tempDir)) {
+    $tempDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'test_group';
+    if (! is_dir($tempDir)) {
         mkdir($tempDir);
     }
-    
+
     $baseName = 'test_view';
-    $filePath = $tempDir . DIRECTORY_SEPARATOR . $baseName . '.sql';
-    
-    $sqlContent = <<<SQL
+    $filePath = $tempDir.DIRECTORY_SEPARATOR.$baseName.'.sql';
+
+    $sqlContent = <<<'SQL'
 ---
 object_type: view
 group: test_group
@@ -26,7 +25,7 @@ CREATE VIEW test_view AS SELECT 1;
 -- down:
 DROP VIEW IF EXISTS test_view;
 SQL;
-    
+
     file_put_contents($filePath, $sqlContent);
 
     $parsed = SqlFileParser::parse($filePath);
@@ -45,14 +44,14 @@ SQL;
 });
 
 it('can parse a simple SQL file without markers as UP only', function () {
-    $tempDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'simple_group';
-    if (!is_dir($tempDir)) {
+    $tempDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'simple_group';
+    if (! is_dir($tempDir)) {
         mkdir($tempDir);
     }
-    
-    $filePath = $tempDir . DIRECTORY_SEPARATOR . 'simple_view.sql';
-    $sqlContent = "CREATE VIEW simple_view AS SELECT 1;";
-    
+
+    $filePath = $tempDir.DIRECTORY_SEPARATOR.'simple_view.sql';
+    $sqlContent = 'CREATE VIEW simple_view AS SELECT 1;';
+
     file_put_contents($filePath, $sqlContent);
 
     $parsed = SqlFileParser::parse($filePath);

@@ -2,9 +2,12 @@
 
 namespace Nguemoue\LaravelDbObject;
 
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
-use Nguemoue\LaravelDbObject\Commands\LaravelDbObjectCommand;
+use Nguemoue\LaravelDbObject\Commands\DboMakeCommand;
+use Nguemoue\LaravelDbObject\Commands\DboMigrateCommand;
+use Nguemoue\LaravelDbObject\Commands\DboRedoCommand;
+use Nguemoue\LaravelDbObject\Commands\DboRefreshCommand;
+use Nguemoue\LaravelDbObject\Commands\DboRollbackCommand;
+use Nguemoue\LaravelDbObject\Commands\DboStatusCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -22,12 +25,12 @@ class LaravelDbObjectServiceProvider extends PackageServiceProvider
             ->hasConfigFile('db-objects')
             ->hasMigrations('create_dbo_migrations_table')
             ->hasCommands(
-                \Nguemoue\LaravelDbObject\Commands\DboMakeCommand::class,
-                \Nguemoue\LaravelDbObject\Commands\DboMigrateCommand::class,
-                \Nguemoue\LaravelDbObject\Commands\DboRollbackCommand::class,
-                \Nguemoue\LaravelDbObject\Commands\DboStatusCommand::class,
-                \Nguemoue\LaravelDbObject\Commands\DboRedoCommand::class,
-                \Nguemoue\LaravelDbObject\Commands\DboRefreshCommand::class,
+                DboMakeCommand::class,
+                DboMigrateCommand::class,
+                DboRollbackCommand::class,
+                DboStatusCommand::class,
+                DboRedoCommand::class,
+                DboRefreshCommand::class,
             );
     }
 

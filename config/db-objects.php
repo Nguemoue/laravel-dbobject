@@ -46,13 +46,13 @@ return [
     |
     */
     'stub' => base_path('stubs/dbo.stub'),
-    'paths' => [ base_path('database/dbo') ],
+    'paths' => [base_path('database/dbo')],
     'connection' => env('DB_OBJECTS_CONNECTION'), // null => default
     'default_filters' => [
         'groups' => [],
-        'tags'   => [],
-        'names'  => [],
-        'exclude'=> [],
+        'tags' => [],
+        'names' => [],
+        'exclude' => [],
     ],
     'rollback_steps' => 1,
     'dry_run' => false,

@@ -5,12 +5,19 @@ namespace Nguemoue\LaravelDbObject\Configuration;
 class ObjectConfiguration
 {
     public bool $enabled = true;
+
     public bool $transactional;
+
     public string $splitter;
+
     public string $delimiter;
+
     public string $batchSeparator;
+
     public string $onExists;
+
     public string $onMissingDrop = 'auto'; // Default to auto (generate drop)
+
     public ?string $schema = null;
 
     public function __construct(string $driver, array $overrides = [])
@@ -23,7 +30,7 @@ class ObjectConfiguration
         $this->batchSeparator = $defaults['batch_separator'] ?? 'GO';
         $this->onExists = $defaults['on_exists'];
         $this->schema = $defaults['schema'];
-        
+
         // Apply overrides
         if (isset($overrides['enabled']) && is_bool($overrides['enabled'])) {
             $this->enabled = $overrides['enabled'];
@@ -47,7 +54,7 @@ class ObjectConfiguration
             $this->onMissingDrop = $overrides['on_missing_drop'];
         }
         if (array_key_exists('schema', $overrides)) { // Allow null
-             $this->schema = $overrides['schema'];
+            $this->schema = $overrides['schema'];
         }
     }
 

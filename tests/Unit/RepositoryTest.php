@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Schema;
 use Nguemoue\LaravelDbObject\Migration\DboMigrationRepository;
 
 it('creates migration table and logs entries', function () {
-    $repo = new DboMigrationRepository();
+    $repo = new DboMigrationRepository;
 
     // Ensure creation
     $repo->ensureTableExists();

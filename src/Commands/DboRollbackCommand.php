@@ -8,25 +8,28 @@ use Nguemoue\LaravelDbObject\Migration\DboMigrator;
 class DboRollbackCommand extends Command
 {
     protected $signature = 'dbo:rollback {name? : Nom de l\'objet à rollback (optionnel)}';
+
     protected $description = 'Annule (down) le dernier batch de migrations d\'objets, ou un objet spécifique si un nom est fourni';
 
     public function handle(): int
     {
         $objectName = $this->argument('name');
-        $migrator = new DboMigrator();
+        $migrator = new DboMigrator;
 
         if ($objectName) {
             // Rollback d'un objet particulier
-            $success = $migrator->rollbackObject($objectName, function($name, $type) {
+            $success = $migrator->rollbackObject($objectName, function ($name, $type) {
                 $this->line("Rolling back: <info>{$type} {$name}</info>");
             });
-            
+
             if ($success) {
                 $this->info("Objet '{$objectName}' rollbacké avec succès.");
+
                 return 0;
             }
 
             $this->warn("Aucune migration trouvée pour l'objet '{$objectName}'.");
+
             return 0;
         }
 
@@ -34,10 +37,11 @@ class DboRollbackCommand extends Command
         $batch = $migrator->getRepository()->getLastBatchNumber();
         if ($batch === null) {
             $this->info("Aucun batch de migrations d'objets à annuler.");
+
             return 0;
         }
         $this->info("Rollback du batch #{$batch}...");
-        $rolledBack = $migrator->rollbackLastBatch(function($name, $type) {
+        $rolledBack = $migrator->rollbackLastBatch(function ($name, $type) {
             $this->line("Rolling back: <info>{$type} {$name}</info>");
         });
         if ($rolledBack > 0) {
@@ -45,6 +49,7 @@ class DboRollbackCommand extends Command
         } else {
             $this->info("Batch #{$batch} annulé.");
         }
+
         return 0;
     }
 }
