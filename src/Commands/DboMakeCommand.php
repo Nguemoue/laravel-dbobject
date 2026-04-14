@@ -15,7 +15,7 @@ class DboMakeCommand extends Command
     {
         $name = $this->argument('name');
         $type = strtolower($this->option('type') ?? '');
-        $group = $this->option('group') ?: config('dbobjects.default_group', 'general');
+        $group = $this->option('group') ?: config('db-objects.default_group', 'general');
 
         // Valider le type
         $validTypes = ['function', 'procedure', 'trigger', 'view'];
@@ -29,15 +29,14 @@ class DboMakeCommand extends Command
         $name = preg_replace('/\.sql$/', '', $name);
 
         // Construire le chemin du fichier à créer
-        $basePath = config('dbobjects.path', base_path('database/dbo'));
+        $basePath = config('db-objects.path', base_path('database/dbo'));
         $groupPath = $basePath . DIRECTORY_SEPARATOR . $group;
         
-        $upPath = $groupPath . DIRECTORY_SEPARATOR . $name . '.up.sql';
-        $downPath = $groupPath . DIRECTORY_SEPARATOR . $name . '.down.sql';
+        $sqlPath = $groupPath . DIRECTORY_SEPARATOR . $name . '.sql';
 
         // Vérifier l'existence
-        if (File::exists($upPath)) {
-            $this->error("Le fichier $upPath existe déjà.");
+        if (File::exists($sqlPath)) {
+            $this->error("Le fichier $sqlPath existe déjà.");
             return 1;
         }
 
@@ -46,29 +45,30 @@ class DboMakeCommand extends Command
             File::makeDirectory($groupPath, 0755, true);
         }
 
-        // Load stubs
-        $stubUpPath = __DIR__ . '/../../stubs/dbo.up.stub';
-        $stubDownPath = __DIR__ . '/../../stubs/dbo.down.stub';
+        // Load stub
+        $stubPath = __DIR__ . '/../../stubs/dbo.stub';
 
-        $upContent = File::exists($stubUpPath) ? File::get($stubUpPath) : "CREATE __TYPE__ __NAME__\n";
-        $downContent = File::exists($stubDownPath) ? File::get($stubDownPath) : "DROP __TYPE__ IF EXISTS __NAME__;\n";
+        if (!File::exists($stubPath)) {
+            $this->error("Le stub $stubPath n'existe pas.");
+            return 1;
+        }
+
+        $content = File::get($stubPath);
 
         // Replacements
         $replacements = [
             '__NAME__'        => $name,
-            '__TYPE__'        => strtoupper($type),
+            '__TYPE__'        => $type,
+            '__GROUP__'       => $group,
         ];
         
-        $upContent = str_replace(array_keys($replacements), array_values($replacements), $upContent);
-        $downContent = str_replace(array_keys($replacements), array_values($replacements), $downContent);
+        $content = str_replace(array_keys($replacements), array_values($replacements), $content);
 
-        // Write files
-        File::put($upPath, $upContent);
-        File::put($downPath, $downContent);
+        // Write file
+        File::put($sqlPath, $content);
 
-        $this->info("Fichiers de migration créés:");
-        $this->info("- $upPath");
-        $this->info("- $downPath");
+        $this->info("Fichier de migration créé:");
+        $this->info("- $sqlPath");
         
         return 0;
     }

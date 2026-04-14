@@ -19,12 +19,21 @@ beforeEach(function() {
     // Point config to this path
     config(['db-objects.path' => $this->basePath]);
     
-    // Create file
-    $this->upPath = $this->groupPath . '/my_view.up.sql';
-    $this->downPath = $this->groupPath . '/my_view.down.sql';
+    // Create unified SQL file
+    $this->sqlPath = $this->groupPath . '/my_view.sql';
     
-    File::put($this->upPath, "CREATE VIEW my_view AS SELECT 1 as col;");
-    File::put($this->downPath, "DROP VIEW IF EXISTS my_view;");
+    $sqlContent = <<<SQL
+---
+object_type: view
+group: test_group
+---
+-- up:
+CREATE VIEW my_view AS SELECT 1 as col;
+-- down:
+DROP VIEW IF EXISTS my_view;
+SQL;
+    
+    File::put($this->sqlPath, $sqlContent);
 });
 
 afterEach(function() {
@@ -33,7 +42,7 @@ afterEach(function() {
     }
 });
 
-it('migrates and rollbacks a view successfully', function () {
+it('migrates and rollbacks a view successfully from a single file', function () {
     $migrator = new DboMigrator();
     
     // Migrate

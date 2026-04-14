@@ -14,10 +14,10 @@
   "topbarLinks": [
     {
       "name": "Support",
-      "url": "mailto:votre-email@exemple.com"
+      "url": "mailto:lucchuala@gmail.com"
     }
   ],
-  "topbarCta": {
+  "topbarCtaButton": {
     "type": "github",
     "url": "https://github.com/Nguemoue/laravel-dbobject"
   },

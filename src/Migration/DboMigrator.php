@@ -85,7 +85,7 @@ class DboMigrator
             }
 
             // 4. Execution Logic
-            $run = function () use ($object, $config, $adapter, $driver) {
+            $run = function () use ($object, $config, $adapter) {
                 // Handle on_exists = recreate
                 if ($config->onExists === 'recreate') {
                     $dropSql = $this->defaultDropStatement($object['type'], $object['name'], $adapter);
@@ -148,7 +148,7 @@ class DboMigrator
             $group = $rec->group;
             
             // Find file
-            $upPath = $basePath . DIRECTORY_SEPARATOR . $group . DIRECTORY_SEPARATOR . $name . '.up.sql';
+            $upPath = $basePath . DIRECTORY_SEPARATOR . $group . DIRECTORY_SEPARATOR . $name . '.sql';
             
             $downSql = null;
             $config = null;
@@ -213,7 +213,7 @@ class DboMigrator
 
         $type = $record->object_type;
         $group = $record->group;
-        $upPath = $basePath . DIRECTORY_SEPARATOR . $group . DIRECTORY_SEPARATOR . $name . '.up.sql';
+        $upPath = $basePath . DIRECTORY_SEPARATOR . $group . DIRECTORY_SEPARATOR . $name . '.sql';
 
         $downSql = null;
         $config = null;
@@ -323,8 +323,11 @@ class DboMigrator
         }
         $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($basePath));
         foreach ($iterator as $file) {
-            if ($file->isFile() && str_ends_with($file->getFilename(), '.up.sql')) {
-                $files[] = $file->getPathname();
+            // Now we look for any .sql file, but we exclude .up.sql and .down.sql if they exist from legacy
+            if ($file->isFile() && str_ends_with($file->getFilename(), '.sql')) {
+                if (!str_ends_with($file->getFilename(), '.up.sql') && !str_ends_with($file->getFilename(), '.down.sql')) {
+                    $files[] = $file->getPathname();
+                }
             }
         }
         return $files;

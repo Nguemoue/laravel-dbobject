@@ -7,69 +7,79 @@ class SqlFileParser
     /**
      * Parse an object definition starting from its UP SQL file.
      *
-     * @param string $upFilePath Path to the .up.sql file
+     * @param string $filePath Path to the .sql file
      * @return array
      */
-    public static function parse(string $upFilePath): array
+    public static function parse(string $filePath): array
     {
-        $directory = dirname($upFilePath);
-        $filename = basename($upFilePath);
-        
-        // Expected format: name.up.sql
-        // If the file does not end in .up.sql, we might skip it or handle it legacy?
-        // The user says "Drop a .up.sql file".
-        
-        // Let's support legacy .sql too?
-        // The prompt implies a new system. Let's strictly look for .up.sql or handle .sql as legacy if needed.
-        // But for "UPDATE the project", let's assume we look for .up.sql primarily.
-        // However, DboMigrator currently globs `*.sql`. I will change that later.
-        
-        $baseName = preg_replace('/\.up\.sql$/', '', $filename);
-        if ($baseName === $filename) {
-             // Fallback for simple .sql files if we decide to support them as "up only"
-             $baseName = preg_replace('/\.sql$/', '', $filename);
+        $content = file_get_contents($filePath);
+        if ($content === false) {
+            throw new \RuntimeException("Cannot read file: $filePath");
         }
-        
+
+        $directory = dirname($filePath);
+        $filename = basename($filePath);
+        $baseName = preg_replace('/\.sql$/', '', $filename);
         $group = basename($directory);
-        
-        $upSql = file_get_contents($upFilePath);
-        if ($upSql === false) {
-             throw new \RuntimeException("Cannot read file: $upFilePath");
-        }
-        
-        // Look for down file
-        $downFilePath = $directory . DIRECTORY_SEPARATOR . $baseName . '.down.sql';
-        $downSql = '';
-        if (file_exists($downFilePath)) {
-            $downSql = file_get_contents($downFilePath) ?: '';
-        }
-        
-        // Look for config file
-        $configFilePath = $directory . DIRECTORY_SEPARATOR . $baseName . '.sql.json';
+
+        // 1. Extract Front-matter
         $configOverrides = [];
-        if (file_exists($configFilePath)) {
-            $json = file_get_contents($configFilePath);
-            if ($json) {
-                $decoded = json_decode($json, true);
-                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                    $configOverrides = $decoded;
+        $frontMatterPattern = '/^---\s*\n(.*?)\n---\s*\n/s';
+        $body = $content;
+
+        if (preg_match($frontMatterPattern, $content, $matches)) {
+            $frontMatter = $matches[1];
+            $body = substr($content, strlen($matches[0]));
+            
+            // Simple YAML-like parsing (key: value)
+            foreach (explode("\n", $frontMatter) as $line) {
+                if (str_contains($line, ':')) {
+                    [$key, $value] = explode(':', $line, 2);
+                    $key = trim($key);
+                    $value = trim($value);
+                    
+                    // Handle simple arrays like []
+                    if (str_starts_with($value, '[') && str_ends_with($value, ']')) {
+                        $value = trim($value, '[]');
+                        $configOverrides[$key] = $value ? array_map('trim', explode(',', $value)) : [];
+                    } else {
+                        // Remove quotes if present
+                        $value = trim($value, "\"'");
+                        $configOverrides[$key] = $value;
+                    }
                 }
             }
         }
+
+        // 2. Split UP and DOWN sections
+        $upSql = '';
+        $downSql = '';
+
+        if (preg_match('/--\s*up:(.*?)(?:--\s*down:|$)/is', $body, $upMatches)) {
+            $upSql = trim($upMatches[1]);
+        }
         
-        // Infer type from SQL
-        $type = self::inferType($upSql);
-        
+        if (preg_match('/--\s*down:(.*)$/is', $body, $downMatches)) {
+            $downSql = trim($downMatches[1]);
+        }
+
+        // If no markers found, treat the whole body as UP (for backward compatibility or simple files)
+        if (empty($upSql) && !str_contains($body, '-- up:')) {
+            $upSql = trim($body);
+        }
+
+        // Infer type from front-matter or SQL
+        $type = $configOverrides['object_type'] ?? self::inferType($upSql);
+        $group = $configOverrides['group'] ?? $group;
+
         return [
             'name' => $baseName,
             'group' => $group,
-            'type' => $type, // might be 'unknown' or null
+            'type' => strtoupper($type),
             'up_sql' => $upSql,
             'down_sql' => $downSql,
             'config_overrides' => $configOverrides,
-            'depends' => [], // Dependencies are not easily defined in pure SQL without parsing. 
-                             // The user didn't mention dependencies in the new spec. 
-                             // We will leave it empty for now.
+            'depends' => $configOverrides['depends_on'] ?? [],
         ];
     }
     
